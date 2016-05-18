@@ -1,0 +1,83 @@
+/*
+ * TVOnlineListManager.h
+ *
+ *  Created on: Dec 16, 2015
+ *      Author: hwj
+ */
+
+#ifndef SRC_TVONLINELISTMANAGER_H_
+#define SRC_TVONLINELISTMANAGER_H_
+
+#include <map>
+#include <string>
+
+#include "BaseManager.h"
+
+class TVOnlineListManager: public BaseManager {
+public:
+	class TVInfoNode {
+	public:
+		enum DEVICES{
+			DEVICES_TV = 0,
+			DEVICES_PC,
+		};
+		TVInfoNode(unsigned int id, DEVICES devices, bool isRefuse = false, int phpsockfd = -1,
+				int nowtime = 0) :
+				m_id(id), m_phpsockfd(phpsockfd),  m_time(
+						nowtime), m_devices(devices),m_isRefuse(isRefuse) {
+
+		}
+		int getphpSockfd() {
+			return this->m_phpsockfd;
+		}
+		;
+		unsigned int getTVid() {
+			return this->m_id;
+		}
+		;
+		int getTime() {
+			return this->m_time;
+		}
+
+		int getDevices() {
+			return this->m_devices;
+		}
+
+		bool getisResue() {
+			return this->m_isRefuse;
+		}
+		;
+	private:
+		unsigned int m_id;
+		int m_phpsockfd;
+		int m_time;
+		DEVICES m_devices;
+		bool m_isRefuse;
+	};
+
+	static TVOnlineListManager *GetInstance();
+
+	int insertTVinfo(unsigned int id, TVInfoNode::DEVICES devices, bool isRefuse = false, int phpsockfd = -1,
+			int nowtime = 0);
+	bool isTVinfoExist(unsigned int id, TVInfoNode::DEVICES devices = TVInfoNode::DEVICES::DEVICES_PC);
+	int getPhpSock(unsigned int id);
+	bool getIsRefuse(unsigned int id);
+	int removeTvinfo(unsigned int id);
+
+	typedef std::map<unsigned int, TVInfoNode *> TVInfoMaps;
+	bool getTVListHead(TVOnlineListManager::TVInfoMaps::iterator &iter);
+	TVInfoNode *getNextNode(TVOnlineListManager::TVInfoMaps::iterator & iter);
+
+	TVOnlineListManager::TVInfoMaps & getTVInfoMaps(void);
+
+	virtual ~TVOnlineListManager();
+private:
+	TVOnlineListManager();
+
+	TVInfoMaps m_tvinfo_map;
+
+	static TVOnlineListManager *m_instance;
+
+};
+
+#endif /* SRC_TVOnlineListManager_H_ */
