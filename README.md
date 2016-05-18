@@ -1,3 +1,2 @@
 # tvdoctor
-init git
-lllllllllllllllllllll
+init git Repository
