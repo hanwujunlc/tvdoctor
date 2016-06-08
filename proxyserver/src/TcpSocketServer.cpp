@@ -181,7 +181,7 @@ int TcpSocketServer::parseDataPackage(int sockfd, char *buf, int len) {
 								target);
 				if (!pc_conn) {
 					//TODO send error msg to TV
-					LOG_DEBUG("getConnectionByfd ERROR 2 ");
+					LOG_ERROR("getConnectionByfd ERROR 2 ");
 				} else {
 					std::string returnbuf = package->getProtocolBuffer();
 					this->writeMsgToWebsocket(pc_conn->getReadSockfd(), returnbuf.c_str(), returnbuf.length());
