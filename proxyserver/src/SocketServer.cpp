@@ -182,7 +182,7 @@ void SocketServer::processEpollEvents() {
 				if (conn_sock == -1) {
 					if (errno != EAGAIN && errno != ECONNABORTED
 							&& errno != EPROTO && errno != EINTR)
-						LOG_DEBUG("accept");
+						LOG_DEBUG("accept error = %d", errno);
 				}
 				continue;
 			}
