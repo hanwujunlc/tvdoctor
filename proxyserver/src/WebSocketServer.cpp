@@ -70,7 +70,8 @@ int WebSocketServer::receiverMsg(int sockfd, char *buf, int len) {
 	if (0 != strstr(buf, "\r\n\r\n")) {
 		do_handshake(sockfd, buf, len);
 	} else {
-		do_parseMsg(sockfd, buf, len);
+		//do_parseMsg(sockfd, buf, len);
+		do_parsebuffer(sockfd, buf, len);
 	}
 	return 0;
 }
@@ -334,6 +335,64 @@ int WebSocketServer::do_parseMsg(int sockfd, char *buf, int len) {
 //	LOG_DEBUG("payload data = %s", payload_data);
 
 	parseDataPackage(sockfd, payload_data, payload_len);
+
+	return 0;
+}
+
+int WebSocketServer::do_parsebuffer(int sockfd, char *buf, int len)
+{
+	if (len < 2) {
+		return -1;
+	}
+	int buffer_len = len;
+	int buffer_begin = 0;
+	int left_len = len;
+	while (buffer_begin + 2 < buffer_len) {
+		int fin = ((buf[buffer_begin + 0] >> 7) & 1);
+		int opcode = buf[buffer_begin + 0] & 0xf;
+		int rsv = buf[buffer_begin + 0] & 0x70;
+		int isMask = (buf[buffer_begin + 1] >> 7) & 1;
+		int payload_len = (buf[buffer_begin + 1] & 0x7f);
+
+		if (1 != fin) {
+
+		}
+
+		if (8 == opcode) {
+			break;
+		}
+		if (0 != rsv /*|| opcode > 2*/) {
+			break;
+		}
+		int heade_length = 2;
+		if (126 == payload_len) {
+			heade_length += 2;
+			payload_len = ((buf[buffer_begin + 2] & 0xff) << 8) + (buf[buffer_begin + 3] & 0xff);
+		} else if (127 == payload_len) {
+			heade_length += 8;
+			payload_len = ((buf[buffer_begin + 2] & 0xff) << 8) + (buf[buffer_begin + 3] & 0xff);
+		}
+
+		char mask[4];
+		bzero(mask, 4);
+		if (1 == isMask) {
+			memcpy(mask, buf + heade_length, 4);
+			heade_length += 4;
+		}
+		char payload_data[BUFF_SIZE];
+		bzero(payload_data, BUFF_SIZE);
+		memcpy(payload_data, buf + buffer_begin + heade_length, payload_len);
+
+		if (1 == isMask) {
+			for (int i = 0; i < payload_len; ++i) {
+				payload_data[i] = payload_data[i] ^ mask[i % 4];
+			}
+		}
+		parseDataPackage(sockfd, payload_data, payload_len);
+		buffer_begin += (payload_len + heade_length);
+		left_len -= (payload_len + heade_length);
+
+	}
 
 	return 0;
 }
