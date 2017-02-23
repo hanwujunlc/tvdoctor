@@ -22,6 +22,7 @@
 #include "ConnectionManager.h"
 #include "ConnectFilter.h"
 #include "ConnectFilterManager.h"
+#include "TVListManager.h"
 #include "TVOnlineListManager.h"
 #include "base64/base64.h"
 #include "PackDataReader.h"
@@ -186,15 +187,20 @@ int WebSocketServer::parseDataPackage(int sockfd, char *buf, int len) {
 
 
 						int wsockfd = pc_conn->getWriteSockfd();
+						int wid = pc_conn->getWriteId();
 
 						this->disconnectToWebSocket(sockfd, source);
-						this->disconnectToTcpSocket(wsockfd, target);
+						this->disconnectToTcpSocket(wsockfd, wid);
 
 						ConnectionManager::GetInstance()->removeConnection(source);
-						ConnectionManager::GetInstance()->removeConnection(target);
+						ConnectionManager::GetInstance()->removeConnection(wid);
 
 						ConnectFilterManager::GetInstance()->removeConnFilter(sockfd);
 						ConnectFilterManager::GetInstance()->removeConnFilter(wsockfd);
+
+						TVListManager::GetInstance()->removeTvinfo(wid);
+						TVOnlineListManager::GetInstance()->removeTvinfo(wid);
+
 					} else {
 
 					}
