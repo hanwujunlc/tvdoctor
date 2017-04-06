@@ -344,17 +344,26 @@ int SocketServer::packageMsgForWebsocket(char *dest, char *src, int *len) {
 		return -1;
 	}
 	int length = *len;
-	//LOG_DEBUG("length = %d, %02X", length, length);
+	LOG_DEBUG("length = %d, %02X", length, length);
 	dest[0] = 0x82;
 	int len_pos = 2;
 
-	if (length >= 126) {
+	if (length >= 126 && length < 65536) {
 		dest[1] = 126;
 		dest[2] = (length >> 8) & 0xFF;
 		dest[3] = (length) & 0xFF;
 		len_pos += 2;
-	} else {
+	} else if (length >= 65536){
+		dest[1] = 127;
+		for (int i = 2; ++i; i < 10) {
+			dest[i] = (length >> (8 * (10 - i - 1))) & 0xFF;
+		}
+		//dest[2] = (length >> 8) & 0xFF;
+		//dest[3] = (length) & 0xFF;
+		len_pos += 8;
+	}else {
 		dest[1] = length & 0x7f;
+
 	}
 
 	//LOG_DEBUG("dest[1] = %02X", dest[1] & 0xFF);

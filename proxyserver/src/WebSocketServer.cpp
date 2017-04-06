@@ -376,7 +376,11 @@ int WebSocketServer::do_parsebuffer(int sockfd, char *buf, int len)
 			payload_len = ((buf[buffer_begin + 2] & 0xff) << 8) + (buf[buffer_begin + 3] & 0xff);
 		} else if (127 == payload_len) {
 			heade_length += 8;
-			payload_len = ((buf[buffer_begin + 2] & 0xff) << 8) + (buf[buffer_begin + 3] & 0xff);
+			unsigned int l = 0 ;
+			for (int i = 2; ++i; i < 10) {
+				l += ((buf[buffer_begin + i] & 0xff) << (8 * (10 - i - 1)));
+			}
+			payload_len = l; //((buf[buffer_begin + 2] & 0xff) << 8) + (buf[buffer_begin + 3] & 0xff);
 		}
 
 		char mask[4];
