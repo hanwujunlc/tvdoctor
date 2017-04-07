@@ -16,7 +16,7 @@
 #define BUFF_SIZE 1024 * 10
 #define PHP_TIMEOUT 65
 
-#define WEBSOCK_PORT 9000
+#define WEBSOCK_PORT 9008
 #define TCPSOCK_PORT 9001
 #define PHPSOCK_PORT 9002
 #define FILESOCK_PORT 9003
@@ -31,5 +31,7 @@
 #define DEFAULT_LOG_MAXSIZE 1024 * 10
 
 #define LOG_DEBUG_LEVEL 4
+
+#define EPOLL_TIMEOUT 100
 
 #endif

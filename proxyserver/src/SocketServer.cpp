@@ -140,14 +140,23 @@ int SocketServer::init() {
 	return 0;
 }
 
-void SocketServer::processEvents() {
+void SocketServer::process()
+{
+	while(true) {
+		processEpollEvents();
+		processMsg();
+	}
+}
+
+
+void SocketServer::processEpollEvents() {
 	struct epoll_event ev, events[MAX_EVENTS];
 	int nfds, nread, conn_sock, i, addrlen, n;
 	struct sockaddr_in remote;
 	char buf[BUFF_SIZE];
 	for (;;) {
 		
-		nfds = epoll_wait(this->m_epollfd, events, MAX_EVENTS, -1);
+		nfds = epoll_wait(this->m_epollfd, events, MAX_EVENTS, EPOLL_TIMEOUT);
 		if (nfds == -1) {
 			LOG_DEBUG("epoll_pwait ERROR");
 			exit(EXIT_FAILURE);
@@ -173,7 +182,7 @@ void SocketServer::processEvents() {
 				if (conn_sock == -1) {
 					if (errno != EAGAIN && errno != ECONNABORTED
 							&& errno != EPROTO && errno != EINTR)
-						LOG_DEBUG("accept");
+						LOG_DEBUG("accept error = %d", errno);
 				}
 				continue;
 			}
@@ -205,54 +214,106 @@ void SocketServer::processEvents() {
 			}
 			if (events[i].events & EPOLLOUT) {
 
-				bool isError = false;
-				bool isDone = true;
-				MessageBuffer *messagebuffer =
-						MessageManager::GetInstance()->getMessageBuffer(sockfd);
-				if (messagebuffer && !messagebuffer->isDataBufferEmpty()) {
-					MessageBuffer::DataBuffer * databuffer;
-					int nwrite = 0;
-					while (NULL != (databuffer = messagebuffer->getDataBuffer())) {
-						nwrite = write(sockfd, (const char *) databuffer->m_buf,
-								databuffer->m_cache_size);
-
-						if ((unsigned int) nwrite == databuffer->m_cache_size) {
-							messagebuffer->removeDataBufferFont();
-						} else {
-							if (-1 == nwrite && errno != EAGAIN) {
-								LOG_DEBUG("write error : errno = %d", errno);
-								disconnectBySockfd(sockfd);
-								isError = true;
-							} else if ((unsigned int) nwrite
-									< databuffer->m_cache_size
-									&& -1 != nwrite) {
-								databuffer->resetDataBuffer(nwrite);
-							}
-							isDone = false;
-							break;
-						}
-
-					}
-				}
-
-				if (isError) {
-					struct epoll_event event;
-					event.data.fd = sockfd;
-					event.events = events[i].events;
-					epoll_ctl(this->m_epollfd, EPOLL_CTL_DEL, event.data.fd,
-							&event);
-				} else {
-					if (isDone) {
-						struct epoll_event event;
-						event.data.fd = sockfd;
-						event.events = EPOLLIN | EPOLLET;
-						epoll_ctl(this->m_epollfd, EPOLL_CTL_MOD, event.data.fd,
-								&event);
-					}
-				}
+//				bool isError = false;
+//				bool isDone = true;
+//				MessageBuffer *messagebuffer =
+//						MessageManager::GetInstance()->getMessageBuffer(sockfd);
+//				if (messagebuffer && !messagebuffer->isDataBufferEmpty()) {
+//					MessageBuffer::DataBuffer * databuffer;
+//					int nwrite = 0;
+//					while (NULL != (databuffer = messagebuffer->getDataBuffer())) {
+//						nwrite = write(sockfd, (const char *) databuffer->m_buf,
+//								databuffer->m_cache_size);
+//
+//						if ((unsigned int) nwrite == databuffer->m_cache_size) {
+//							messagebuffer->removeDataBufferFont();
+//						} else {
+//							if (-1 == nwrite && errno != EAGAIN) {
+//								LOG_DEBUG("write error : errno = %d", errno);
+//								disconnectBySockfd(sockfd);
+//								isError = true;
+//							} else if ((unsigned int) nwrite
+//									< databuffer->m_cache_size
+//									&& -1 != nwrite) {
+//								databuffer->resetDataBuffer(nwrite);
+//							}
+//							isDone = false;
+//							break;
+//						}
+//
+//					}
+//				}
+//
+//				if (isError) {
+//					struct epoll_event event;
+//					event.data.fd = sockfd;
+//					event.events = events[i].events;
+//					epoll_ctl(this->m_epollfd, EPOLL_CTL_DEL, event.data.fd,
+//							&event);
+//				} else {
+//					if (isDone) {
+//						struct epoll_event event;
+//						event.data.fd = sockfd;
+//						event.events = EPOLLIN | EPOLLET;
+//						epoll_ctl(this->m_epollfd, EPOLL_CTL_MOD, event.data.fd,
+//								&event);
+//					}
+//				}
 			}
 		}
 	}
+}
+
+int SocketServer::processMsg() {
+
+	MessageManager::MessageMaps &message_map = MessageManager::GetInstance()->getMessageMap();
+	MessageManager::MessageMaps::iterator iter = message_map.begin();
+	while (iter != message_map.end()) {
+		if (-1 != iter->first && iter->second) {
+			bool isRemove = false;
+			MessageBuffer *messagebuffer = iter->second;
+			if (messagebuffer->isDataBufferEmpty()) {
+				isRemove = true;
+			} else {
+				int sockfd = iter->first;
+
+				MessageBuffer::DataBuffer * databuffer;
+				int nwrite = 0;
+				while (NULL != (databuffer = messagebuffer->getDataBuffer())) {
+					nwrite = write(sockfd, (const char *) databuffer->m_buf,
+							databuffer->m_cache_size);
+
+					if ((unsigned int) nwrite == databuffer->m_cache_size) {
+						messagebuffer->removeDataBufferFont();
+						//LOG_DEBUG("write over data buffer");
+					} else {
+						if (-1 == nwrite && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+							LOG_ERROR("write error : socket = %d, errno = %d", sockfd, errno);
+							disconnectBySockfd(sockfd);
+							isRemove = true;
+
+						} else if ((unsigned int) nwrite < databuffer->m_cache_size && -1 != nwrite) {
+							databuffer->resetDataBuffer(nwrite);
+							//LOG_DEBUG("write data buffer length = %d", nwrite);
+						}
+						break;
+					}
+				}
+			}
+			if (!isRemove) {
+				++iter;
+				continue;
+			} else {
+				delete iter->second;
+				message_map.erase(iter++);
+			}
+		} else {
+			if (iter->second)
+				delete iter->second;
+			message_map.erase(iter++);
+		}
+	}
+	return 0;
 }
 
 void SocketServer::handlEvent(int sockfd, char *buf, int len) {
@@ -283,17 +344,26 @@ int SocketServer::packageMsgForWebsocket(char *dest, char *src, int *len) {
 		return -1;
 	}
 	int length = *len;
-	//LOG_DEBUG("length = %d, %02X", length, length);
+	LOG_DEBUG("length = %d, %02X", length, length);
 	dest[0] = 0x82;
 	int len_pos = 2;
 
-	if (length >= 126) {
+	if (length >= 126 && length < 65536) {
 		dest[1] = 126;
 		dest[2] = (length >> 8) & 0xFF;
 		dest[3] = (length) & 0xFF;
 		len_pos += 2;
-	} else {
+	} else if (length >= 65536){
+		dest[1] = 127;
+		for (int i = 2; ++i; i < 10) {
+			dest[i] = (length >> (8 * (10 - i - 1))) & 0xFF;
+		}
+		//dest[2] = (length >> 8) & 0xFF;
+		//dest[3] = (length) & 0xFF;
+		len_pos += 8;
+	}else {
 		dest[1] = length & 0x7f;
+
 	}
 
 	//LOG_DEBUG("dest[1] = %02X", dest[1] & 0xFF);
@@ -307,10 +377,10 @@ int SocketServer::writeMsg(int sockfd, const char *buf, int len) {
 	if (MessageManager::GetInstance()->isMessageBufferExist(sockfd)) {
 		MessageManager::GetInstance()->insertMessageBuffer(sockfd, (unsigned char *) (buf), len);
 		LOG_DEBUG("Socket %d has message buffer", sockfd);
-		struct epoll_event event;
-		event.data.fd = sockfd;
-		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
-		epoll_ctl(this->m_epollfd, EPOLL_CTL_MOD, event.data.fd, &event);
+//		struct epoll_event event;
+//		event.data.fd = sockfd;
+//		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+//		epoll_ctl(this->m_epollfd, EPOLL_CTL_MOD, event.data.fd, &event);
 		return 0;
 	}
 
@@ -337,10 +407,10 @@ int SocketServer::writeMsg(int sockfd, const char *buf, int len) {
 		MessageManager::GetInstance()->insertMessageBuffer(sockfd,
 				(unsigned char *) (buf + writelen), len - writelen);
 
-		struct epoll_event event;
-		event.data.fd = sockfd;
-		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
-		epoll_ctl(this->m_epollfd, EPOLL_CTL_MOD, event.data.fd, &event);
+//		struct epoll_event event;
+//		event.data.fd = sockfd;
+//		event.events = EPOLLIN | /*EPOLLOUT | */EPOLLET;
+//		epoll_ctl(this->m_epollfd, EPOLL_CTL_MOD, event.data.fd, &event);
 	}
 
 	LOG_DEBUG("write socket to %d  writed message length is : %d, message length is %d ", sockfd, ret, len);
@@ -387,6 +457,12 @@ int SocketServer::disconnectBySockfd(int sockfd) {
 			MessageManager::GetInstance()->removeMessageBuffer(wsockfd);
 			TVListManager::GetInstance()->removeTvinfo(tv_id);
 			TVOnlineListManager::GetInstance()->removeTvinfo(tv_id);
+		} else {
+			if(Connection::DEVICES_TV == conn->getDevices()) {
+				TVListManager::GetInstance()->removeTvinfo(id);
+				TVOnlineListManager::GetInstance()->removeTvinfo(id);
+			}
+
 		}
 
 		ConnectionManager::GetInstance()->removeConnection(id);

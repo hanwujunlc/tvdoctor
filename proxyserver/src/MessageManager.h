@@ -15,6 +15,7 @@
 class MessageBuffer;
 class MessageManager : public BaseManager{
 public:
+	typedef std::map<int, MessageBuffer * > MessageMaps;
 	static MessageManager *GetInstance();
 	virtual ~MessageManager();
 	int insertMessageBuffer(int sockfd, unsigned char *buf, unsigned int len);
@@ -22,12 +23,13 @@ public:
 
 	MessageBuffer *getMessageBuffer(int sockfd);
 	bool isMessageBufferExist(int sockfd);
+	MessageMaps & getMessageMap(void);
+
 private:
 	MessageManager();
 
 	static MessageManager *m_instance;
 
-	typedef std::map<int, MessageBuffer * > MessageMaps;
 	MessageMaps m_message_map;
 };
 

@@ -107,7 +107,8 @@ void BaseServer::processEpollEvents() {
 	struct sockaddr_in remote;
 	char buf[BUFF_SIZE];
 
-	nfds = epoll_wait(m_epollfd, events, MAX_EVENTS, 100);
+ 
+	nfds = epoll_wait(m_epollfd, events, MAX_EVENTS, EPOLL_TIMEOUT);
 	if (nfds == -1) {
 		LOG_DEBUG("epoll_pwait ERROR");
 		exit(EXIT_FAILURE);

@@ -6,6 +6,7 @@
 
 #define T2S_CMD_HEARTBEAT                               (0x00010002)
 #define T2S_CMD_REG_TV                                  (0x00010004)
+#define T2S_CMD_REG_TV_TEST                             (0x00040004)
 #define T2S_RET_REG_TV                                  (0x00010005)
 #define T2S_CMD_TELLME_SRV_ID                           (0x00010006)
 #define T2S_RET_TELLME_SRV_ID                           (0x00010007)

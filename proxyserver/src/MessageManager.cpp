@@ -89,3 +89,7 @@ bool MessageManager::isMessageBufferExist(int sockfd)
 	return false;
 }
 
+MessageManager::MessageMaps & MessageManager::getMessageMap(void)
+{
+	return m_message_map;
+}

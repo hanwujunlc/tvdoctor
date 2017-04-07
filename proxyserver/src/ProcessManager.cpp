@@ -73,21 +73,21 @@ void ProcessManager::processs() {
 static void *start_tcp_connect(void *arg) {
 	TcpSocketServer *tcpsocket = (TcpSocketServer *) arg;
 	tcpsocket = new TcpSocketServer(TCPSOCK_PORT);
-	tcpsocket->processEvents();
+	tcpsocket->process();
 	return NULL;
 }
 
 static void *start_websocket_server(void *arg) {
 	WebSocketServer *webserver = (WebSocketServer *) arg;
 	webserver = new WebSocketServer(WEBSOCK_PORT);
-	webserver->processEvents();
+	webserver->process();
 	return NULL;
 }
 
 static void *start_phpsocket_server(void *arg) {
 	PhpSocketServer *phpserver = (PhpSocketServer *) arg;
 	phpserver = new PhpSocketServer(PHPSOCK_PORT);
-	phpserver->processEvents();
+	phpserver->process();
 	return NULL;
 }
 
@@ -95,7 +95,7 @@ static void *start_phpsocket_server(void *arg) {
 static void *start_filesocket_server(void *arg) {
 	FileSocketServer *fileserver = (FileSocketServer *) arg;
 	fileserver = new FileSocketServer(FILESOCK_PORT);
-	fileserver->processEvents();
+	fileserver->process();
 	return NULL;
 }
 

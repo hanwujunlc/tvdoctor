@@ -29,6 +29,7 @@ public:
 private:
 	int do_handshake(int sockfd, char *buf, int len);
 	int do_parseMsg(int sockfd, char *buf, int len);
+	int do_parsebuffer(int sockfd, char *buf, int len);
 
 	int do_packageMsg(std::string & dest, std::string & src);
 

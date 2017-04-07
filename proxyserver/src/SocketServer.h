@@ -18,7 +18,10 @@ public:
 	SocketServer(int port);
 	virtual ~SocketServer();
 
-	void processEvents();
+	void process();
+	void processEpollEvents();
+
+	int processMsg();
 
 	virtual int acceptConnect(int sockfd) = 0;
 	virtual int disconnect(int sockfd) = 0;

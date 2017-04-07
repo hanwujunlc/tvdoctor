@@ -90,7 +90,7 @@ int TVOnlineListManager::removeTvinfo(unsigned int id)
 	TVInfoMaps::iterator iter = m_tvinfo_map.find(id);
 	if (this->m_tvinfo_map.end() != iter)
 	{
-		if (iter->second) 
+		if (iter->second)
 		{
 			delete iter->second;
 			iter->second = NULL;

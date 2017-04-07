@@ -156,7 +156,7 @@ void dealPhpSocketTimeout(int Num) {
 
 int PhpSocketServer::receiverMsg(int sockfd, char *buf, int len) {
 	//std:string    recivedata = buf;
-	LOG_DEBUG("m_bufParam id = %s ,sockfd = %d", buf, sockfd);
+	LOG_DEBUG("m_bufParam id = %s, sockfd = %d", buf, sockfd);
 	unsigned int crc32_id = crc32_hash((const unsigned char*) (buf), len);
 	LOG_DEBUG("crc32_id =  0x%08x", crc32_id);
 

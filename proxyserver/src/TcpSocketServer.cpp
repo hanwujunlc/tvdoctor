@@ -136,6 +136,42 @@ int TcpSocketServer::parseDataPackage(int sockfd, char *buf, int len) {
 							returnbuf.length());
 				}
 					break;
+				case T2S_CMD_REG_TV_TEST: {
+					const std::string & id = package->getStringParam(); //content->m_bufParam;
+					LOG_DEBUG("tv_id = %s", id.c_str());
+					unsigned int crc32_id = crc32_hash((const unsigned char*) (id.c_str()), id.length());
+
+//					bool tvidIsexist = TVListManager::GetInstance()->isTVinfoExist(crc32_id, TVListManager::TVInfoNode::DEVICES_PC);
+//					LOG_DEBUG("crc32_id =  0x%08x,tvidIsexist=%d", crc32_id, tvidIsexist);
+//					if (tvidIsexist) { //存在 通知phpTV接受请求了
+//						int phpsck = TVListManager::GetInstance()->getPhpSock(
+//								crc32_id);
+//						LOG_DEBUG("phpsck === %d", phpsck);
+//						if (0 != phpsck) {
+//							writeMsgToPhpSocket(phpsck, "ok", 2);
+//						}
+//						TVListManager::GetInstance()->removeTvinfo(crc32_id);
+//						//TVOnlineListManager::GetInstance()->insertTVinfo(crc32_id, TVOnlineListManager::TVInfoNode::DEVICES_PC);
+//					} else {
+//						time_t nowtime = time(0);
+//						TVListManager::GetInstance()->insertTVinfo(crc32_id,
+//								TVListManager::TVInfoNode::DEVICES_TV, false,
+//								-1, nowtime);
+//					}
+
+					Connection *conn = new Connection(sockfd, source,
+							Connection::DEVICES_TV);
+					ConnectionManager::GetInstance()->insertConnection(source,
+							conn);
+
+					VncDataPackage package;
+					package.setSourceAndTarget(SERVER_ID, source);
+					package.setCommandId(T2S_CMD_TELLME_SRV_ID, 0);
+					package.setIntegerParam(SERVER_ID);
+					std::string returnbuf = package.getProtocolBuffer();
+					this->sendMsg(sockfd, returnbuf.c_str(), returnbuf.length());
+				}
+					break;
 				case T2S_CMD_REJECT_HELP:
 				{
 				 const std::string & id = package->getStringParam(); 
@@ -181,7 +217,7 @@ int TcpSocketServer::parseDataPackage(int sockfd, char *buf, int len) {
 								target);
 				if (!pc_conn) {
 					//TODO send error msg to TV
-					LOG_DEBUG("getConnectionByfd ERROR 2 ");
+					LOG_ERROR("getConnectionByfd ERROR 2 ");
 				} else {
 					std::string returnbuf = package->getProtocolBuffer();
 					this->writeMsgToWebsocket(pc_conn->getReadSockfd(), returnbuf.c_str(), returnbuf.length());
